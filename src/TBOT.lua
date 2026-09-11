@@ -18,8 +18,11 @@ end
 
 local game, workspace = game, workspace
 local getrawmetatable, pcall, next, tick, getgenv = getrawmetatable, pcall, next, tick, getgenv
-local Vector2new, Vector3zero, CFramenew, Color3fromRGB, Color3fromHSV, Drawingnew, TweenInfonew = Vector2.new, Vector3.zero, CFrame.new, Color3.fromRGB, Color3.fromHSV, Drawing and Drawing.new, Tween[...]
-local mousemoverel, mousemoveabs, tablefind, tableremove, stringlower, stringsub, mathclamp = mousemoverel or (Input and Input.MouseMove), mousemoveabs, table.find, table.remove, string.lower, string.[...]
+local Vector2new, Vector3zero, CFramenew = Vector2.new, Vector3.zero, CFrame.new
+local Color3fromRGB, Color3fromHSV = Color3.fromRGB, Color3.fromHSV
+local Drawingnew = Drawing and Drawing.new
+local tablefind, tableremove = table.find, table.remove
+local stringlower, stringsub = string.lower, string.sub
 local mouse1press, mouse1release, taskwait = mouse1press, mouse1release, task.wait
 local clonefunction, cloneref = clonefunction or LPH_NO_VIRTUALIZE(function(...)
 	return ...
@@ -39,8 +42,6 @@ local GameMetatable = getrawmetatable and getrawmetatable(game) or {
 
 local __index = GameMetatable.__index
 local __newindex = GameMetatable.__newindex
-
-local getrenderproperty, setrenderproperty = getrenderproperty or __index, setrenderproperty or __newindex
 
 local _GetService = __index(game, "GetService")
 local GetService = function(Service)
@@ -66,7 +67,6 @@ local GetMouseLocation = __index(UserInputService, "GetMouseLocation")
 local GetPlayers = __index(Players, "GetPlayers")
 local GetPlayerFromCharacter = __index(Players, "GetPlayerFromCharacter")
 local Mouse = __index(LocalPlayer, "GetMouse")(LocalPlayer)
-local CameraViewportSize = __index(Camera, "ViewportSize")
 
 --// Variables
 
@@ -96,7 +96,7 @@ getgenv().TBOT = {
 		AliveCheck = true,
 		WallCheck = true,
 
-		Delay = 0, -- Time it takes for the trigger bot to react / click (seconds)
+		Delay = 0,
 
 		TriggerKey = Enum.UserInputType.MouseButton2,
 		Toggle = false
@@ -105,7 +105,8 @@ getgenv().TBOT = {
 	Blacklisted = {}
 }
 
-local Environment, _warn = getgenv().TBOT, clonefunction(warn); warn = function(...)
+local Environment, _warn = getgenv().TBOT, clonefunction(warn)
+warn = function(...)
 	return not Environment.DeveloperSettings.DisableWarnings and _warn(...)
 end
 
@@ -130,13 +131,15 @@ local CancelTrigger = LPH_NO_VIRTUALIZE(function()
 end)
 
 local CheckTarget = LPH_NO_VIRTUALIZE(function(Character)
+	if not Character then return false end
+	
 	local Settings = Environment.Settings
 	local DeveloperSettings = Environment.DeveloperSettings
 	local TeamCheckOption = DeveloperSettings.TeamCheckOption
 	local Humanoid = FindFirstChildOfClass(Character, "Humanoid")
 	local Player = GetPlayerFromCharacter(Players, Character)
 
-	if not Character or not Humanoid or not Player then
+	if not Humanoid or not Player then
 		return false
 	end
 
@@ -157,8 +160,14 @@ local CheckTarget = LPH_NO_VIRTUALIZE(function(Character)
 
 	-- Wall Check
 	if Settings.WallCheck then
-		local TargetPosition = __index(FindFirstChildOfClass(Character, "Humanoid"), "Position") or __index(Character, "Position")
-		local BlacklistTable = GetDescendants(__index(LocalPlayer, "Character"))
+		local TargetPosition = __index(Character, "Position")
+		local BlacklistTable = {}
+		
+		if LocalPlayer.Character then
+			for _, part in next, GetDescendants(LocalPlayer.Character) do
+				BlacklistTable[#BlacklistTable + 1] = part
+			end
+		end
 
 		for _, _Value in next, GetDescendants(Character) do
 			BlacklistTable[#BlacklistTable + 1] = _Value
@@ -236,11 +245,13 @@ ServiceConnections.InputEndedConnection = Connect(__index(UserInputService, "Inp
 	end
 end))
 
---// Interactive User Methods
+--// Initialize
 
 repeat
 	taskwait(0)
 until Environment and Load
+
+Load()
 
 Environment.Exit = LPH_NO_VIRTUALIZE(function(self)
 	assert(self, "TBOT.Exit: Missing parameter #1 \"self\" <table>.")
